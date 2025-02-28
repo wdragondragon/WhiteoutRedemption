@@ -1,0 +1,3 @@
+[submodule "js-deobfuscator"]
+	path = js-deobfuscator
+	url = https://github.com/kuizuo/js-deobfuscator.git
