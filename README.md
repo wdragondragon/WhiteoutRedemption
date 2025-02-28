@@ -1,0 +1,2 @@
+# WhiteoutRedemption
+根据玩家fid和cdk自动兑换无尽冬日礼包
