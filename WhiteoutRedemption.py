@@ -90,7 +90,6 @@ all_fid = {
     "[Koi]清风明月": "169858869",
     "[Koi]关你西红柿呀": "169875645",
     "[Koi]晚 风": "168531895",
-    "[Koi]松栗奶芙": "267227515",
     "[Koi]随便玩玩玩": "170269383",
     "[Koi]爱吃草莓的小西瓜": "171660947",
     "[Koi]无名小镇（种田版）": "170121987",
@@ -116,7 +115,7 @@ all_cdk = [
     # "TILI520", "WJDRtaptap", "666WJDR2024", "WJDRTB6666", "WOAIWJDR",
 
     # 节日
-    "270W0228",
+    "WJDR6688",
 ]
 
 headers = {
@@ -125,9 +124,11 @@ headers = {
 }
 url_gift = "https://wjdr-giftcode-api.campfiregames.cn/api/gift_code"
 
+retry_limit = 5
 error_login = 0
 totol_error_gift = 0
 totol_success_gift = 0
+totol_retry_limit = 0
 
 for player_name, fid in all_fid.items():
     response_data = login_fid(headers, fid)
@@ -138,7 +139,7 @@ for player_name, fid in all_fid.items():
     else:
         success_gift = 0
         for cdk in all_cdk:
-            for retry in range(3):
+            for retry in range(retry_limit):
                 timestamp_ms = int(datetime.now().timestamp() * 1000)
                 data = {
                     "fid": fid,
@@ -158,25 +159,39 @@ for player_name, fid in all_fid.items():
                 except Exception as e:
                     print(f"[Error] status_code {response.status_code}")
                     # print(response.text)
-                    time.sleep(5 * (retry + 1))
-                    response_data = login_fid(headers, fid)
-                    if response_data["msg"] != "success":
-                        print(f"[Error] Login {player_name} {fid} {response_data}")
+                    if retry < retry_limit - 1:
+                        time.sleep(5 * (retry + 1))
+                        response_data = login_fid(headers, fid)
+                        if response_data["msg"] != "success":
+                            print(f"[Error] Login {player_name} {fid} {response_data}")
+                        time.sleep(1.5)
                     continue
                 # print(response_data)
-                if response_data["msg"] != "SUCCESS":
+                if response_data["msg"] == "RECEIVED.":
                     totol_error_gift += 1
                     print(f"Already redeemed {cdk}")
                     # print("gift response_data: " + str(response_data))
-                else:
+                    break
+                elif response_data["msg"] == "SUCCESS":
                     success_gift += 1
                     print(f"[Success] {cdk}")
-                time.sleep(1.5)
-                break
+                    break
+                else:
+                    print(f"{response_data}")
+                    if retry < retry_limit - 1:
+                        time.sleep(5 * (retry + 1))
+                        response_data = login_fid(headers, fid)
+                        if response_data["msg"] != "success":
+                            print(f"[Error] Login {player_name} {fid} {response_data}")
+                        time.sleep(1.5)
             else:
                 print(f"[Error] Retry limit {player_name} {fid} cdk={cdk}")
+                totol_retry_limit += 1
+        time.sleep(1.5)
 
         totol_success_gift += success_gift
         print(f"=> {player_name} {fid} success_gift={success_gift}")
 
 print(f"error_login = {error_login} totol_error_gift = {totol_error_gift} totol_success_gift = {totol_success_gift}")
+if totol_retry_limit > 0:
+    print(f"[Error] totol_retry_limit = {totol_retry_limit}")
