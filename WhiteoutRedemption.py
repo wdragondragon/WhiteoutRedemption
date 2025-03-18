@@ -80,6 +80,15 @@ all_fid = {
     "纯真": "72777610",
     "汤姆猫_2": "60535909",
     "小新": "78138787",
+    "肖恩克小1": "74940322",
+    "肖恩克小2": "73514790",
+    "肖恩克小3": "72630076",
+    "肖恩克小4": "153756087",
+    "肖恩克小5": "75005585",
+    "肖恩克小6": "250954273",
+    "肖恩克小7": "249678380",
+    "肖恩克小8": "251629365",
+    "肖恩克小9": "248155956",
     "[330]桃桃桃不掉": "59374564",
     "[330]梨梨梨不开": "59571453",
     "[330]不可以打我": "79347789",
@@ -131,6 +140,7 @@ totol_error_gift = 0
 totol_success_gift = 0
 totol_retry_limit = 0
 sleep_time = 2.5
+cdk_sleep_time = 1.5
 timeout_sleep_time = 15
 
 for player_name, fid in all_fid.items():
@@ -190,6 +200,7 @@ for player_name, fid in all_fid.items():
             else:
                 print(f"[Error] Retry limit {player_name} {fid} cdk={cdk}")
                 totol_retry_limit += 1
+            time.sleep(cdk_sleep_time)
         time.sleep(sleep_time)
 
         totol_success_gift += success_gift
