@@ -83,6 +83,7 @@ all_fid = {
     "[330]桃桃桃不掉": "59374564",
     "[330]梨梨梨不开": "59571453",
     "[330]不可以打我": "79347789",
+    "[330]小小敉": "62815477",
 
     "[999]珺璟如晔": "169564351",
     "[Koi]地狱里的油条": "169089644",
@@ -115,7 +116,7 @@ all_cdk = [
     # "TILI520", "WJDRtaptap", "666WJDR2024", "WJDRTB6666", "WOAIWJDR",
 
     # 节日
-    "HEFU520",
+    "WJDR280W",
 ]
 
 headers = {
@@ -129,13 +130,15 @@ error_login = 0
 totol_error_gift = 0
 totol_success_gift = 0
 totol_retry_limit = 0
+sleep_time = 2.5
+timeout_sleep_time = 15
 
 for player_name, fid in all_fid.items():
     response_data = login_fid(headers, fid)
     if response_data["msg"] != "success":
         error_login += 1
         print("[Error] login response_data: " + str(response_data))
-        time.sleep(1)
+        time.sleep(sleep_time)
     else:
         success_gift = 0
         for cdk in all_cdk:
@@ -160,11 +163,11 @@ for player_name, fid in all_fid.items():
                     print(f"[Error] status_code {response.status_code}")
                     # print(response.text)
                     if retry < retry_limit - 1:
-                        time.sleep(5 * (retry + 1))
+                        time.sleep(timeout_sleep_time * (retry + 1))
                         response_data = login_fid(headers, fid)
                         if response_data["msg"] != "success":
                             print(f"[Error] Login {player_name} {fid} {response_data}")
-                        time.sleep(1.5)
+                        time.sleep(sleep_time)
                     continue
                 # print(response_data)
                 if response_data["msg"] == "RECEIVED.":
@@ -183,11 +186,11 @@ for player_name, fid in all_fid.items():
                         response_data = login_fid(headers, fid)
                         if response_data["msg"] != "success":
                             print(f"[Error] Login {player_name} {fid} {response_data}")
-                        time.sleep(1.5)
+                        time.sleep(sleep_time)
             else:
                 print(f"[Error] Retry limit {player_name} {fid} cdk={cdk}")
                 totol_retry_limit += 1
-        time.sleep(1.5)
+        time.sleep(sleep_time)
 
         totol_success_gift += success_gift
         print(f"=> {player_name} {fid} success_gift={success_gift}")
