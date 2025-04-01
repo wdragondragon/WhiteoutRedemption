@@ -236,24 +236,23 @@ class RedeemThread(QThread):
             if login_response.get("msg") != "success":
                 self.update_signal.emit(f"[登录失败] 玩家 {fid}: {login_response}\n")
                 continue
-            time.sleep(0.5)
             nick_name = login_response['data']['nickname']
             kid = login_response['data']['kid']
             new_entry = f"{nick_name} ({fid})"
             self.fids[i] = new_entry  # 更新 FID 名字
             self.update_signal.emit(f"[登录成功] 玩家 [{kid}区][{nick_name}]({fid})")
+            time.sleep(2)
             for cdk in self.cdks:
                 redeem_response = redeem_code(headers, fid, cdk)
                 if redeem_response["msg"] == "RECEIVED.":
-                    self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 重复兑换\n")
-                    break
+                    self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 重复兑换")
                 elif redeem_response["msg"] == "SUCCESS":
                     print(f"[Success] {cdk}")
-                    self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 成功\n")
-                    break
+                    self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 成功")
                 else:
-                    self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 兑换失败: {redeem_response}\n")
-                time.sleep(0.5)
+                    self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 兑换失败: {redeem_response}")
+                self.update_signal.emit("")
+                time.sleep(2)
 
         self.finished_signal.emit()  # 兑换完成，通知主线程
 
