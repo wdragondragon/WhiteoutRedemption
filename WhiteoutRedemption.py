@@ -15,6 +15,11 @@ data_folder = os.path.join(home_dir, "whiteoutRedemption")
 os.makedirs(data_folder, exist_ok=True)
 data_file = os.path.join(data_folder, "data.json")
 
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/133.0.0.0 Safari/537.36",
+    "Content-Type": "application/x-www-form-urlencoded"
+}
+
 
 def load_data():
     if os.path.exists(data_file):
@@ -85,8 +90,6 @@ class GiftRedeemApp(QWidget):
         for fid in self.data["fids"]:
             self.list_fid.addItem(fid)
 
-        self.input_fid_name = QLineEdit()
-        self.input_fid_name.setPlaceholderText("玩家名称")
         self.input_fid = QLineEdit()
         self.input_fid.setPlaceholderText("玩家 FID")
         self.btn_add_fid = QPushButton("添加玩家")
@@ -95,7 +98,6 @@ class GiftRedeemApp(QWidget):
         self.btn_remove_fid.clicked.connect(self.remove_fid)
 
         fid_layout = QHBoxLayout()
-        fid_layout.addWidget(self.input_fid_name)
         fid_layout.addWidget(self.input_fid)
         fid_layout.addWidget(self.btn_add_fid)
         fid_layout.addWidget(self.btn_remove_fid)
@@ -146,15 +148,26 @@ class GiftRedeemApp(QWidget):
         event.accept()
 
     def add_fid(self):
-        name = self.input_fid_name.text().strip()
         fid = self.input_fid.text().strip()
-        if name and fid:
-            entry = f"{name} ({fid})"
+        if fid:
+            self.btn_add_fid.setEnabled(False)  # 禁用兑换按钮
+            self.login_thread = LoginThread(fid)
+            self.login_thread.response_signal.connect(self.add_fid_cb)
+            self.login_thread.start()
+            self.input_fid.clear()
+
+    def add_fid_cb(self, login_response):
+        fid = login_response["fid"]
+        if login_response.get("msg") != "success":
+            self.result_text.append(f"[登录失败] 玩家 {fid}: {login_response}")
+        else:
+            nick_name = login_response['data']['nickname']
+            entry = f"{nick_name} ({fid})"
+            self.result_text.append(f"[登录成功][{entry}]")
             self.list_fid.addItem(entry)
             self.data["fids"].append(entry)
             save_data(self.data["fids"], self.data["cdks"], self.get_window_geometry())
-            self.input_fid_name.clear()
-            self.input_fid.clear()
+        self.btn_add_fid.setEnabled(True)
 
     def remove_fid(self):
         for item in self.list_fid.selectedItems():
@@ -174,29 +187,6 @@ class GiftRedeemApp(QWidget):
         for item in self.list_cdk.selectedItems():
             self.data["cdks"].remove(item.text())
             self.list_cdk.takeItem(self.list_cdk.row(item))
-        save_data(self.data["fids"], self.data["cdks"], self.get_window_geometry())
-
-    def redeem(self):
-        cdks = [self.list_cdk.item(i).text() for i in range(self.list_cdk.count())]
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/133.0.0.0 Safari/537.36",
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
-        for i in range(self.list_fid.count()):
-            fid_item = self.list_fid.item(i)
-            fid = fid_item.text().split(" (")[1][:-1]
-            login_response = login_fid(headers, fid)
-            if login_response.get("msg") != "success":
-                self.result_text.append(f"[登录失败] 玩家 {fid}: {login_response}")
-                continue
-            nick_name = login_response['data']['nickname']
-            entry = f"{nick_name} ({fid})"
-            self.data["fids"][i] = entry
-            fid_item.setText(entry)
-            for cdk in cdks:
-                redeem_response = redeem_code(headers, fid, cdk)
-                self.result_text.append(f"[兑换] 玩家 {fid} 礼包 {cdk}: {redeem_response}")
-
         save_data(self.data["fids"], self.data["cdks"], self.get_window_geometry())
 
     def start_redeem(self):
@@ -271,6 +261,19 @@ class RedeemThread(QThread):
                     self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 兑换失败: {redeem_response}")
 
         self.finished_signal.emit()  # 兑换完成，通知主线程
+
+
+class LoginThread(QThread):
+    response_signal = pyqtSignal(dict)  # 用于更新 UI 的信号
+
+    def __init__(self, fid):
+        super().__init__()
+        self.fid = fid
+
+    def run(self):
+        login_response = login_fid(headers, self.fid)
+        login_response["fid"] = self.fid
+        self.response_signal.emit(login_response)
 
 
 if __name__ == '__main__':
