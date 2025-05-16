@@ -1,14 +1,26 @@
-﻿import hashlib
+﻿import base64
+import hashlib
 import json
 import os
+import shutil
 import sys
 import time
 from datetime import datetime
+from io import BytesIO
 
 import requests
+from PIL import Image
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QListWidget, QPushButton, QTextEdit, QVBoxLayout, \
     QLineEdit, QHBoxLayout, QMessageBox
+
+import ddddocr
+
+ocr = ddddocr.DdddOcr()
+ca_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "captcha")
+if os.path.isdir(ca_path):
+    shutil.rmtree(ca_path)
+os.makedirs(ca_path)
 
 home_dir = os.path.expanduser("~")
 data_folder = os.path.join(home_dir, "whiteoutRedemption")
@@ -54,10 +66,42 @@ def login_fid(headers, fid):
 
 def redeem_code(headers, fid, cdk):
     timestamp_ms = int(datetime.now().timestamp() * 1000)
-    data = generate_sign({"fid": fid, "cdk": cdk, "time": str(timestamp_ms)})
+    data = generate_sign(
+        {"fid": fid, "cdk": cdk, "time": str(timestamp_ms),
+         "captcha_code": get_captcha_code(headers, fid, timestamp_ms), })
     url_gift = "https://wjdr-giftcode-api.campfiregames.cn/api/gift_code"
     response = requests.post(url_gift, headers=headers, data=data)
     return response.json() if response.status_code == 200 else {"msg": "Request Failed"}
+
+
+def get_captcha_code(headers, fid, timestamp_ms):
+    data = {
+        "fid": fid,
+        "time": str(timestamp_ms),
+        "init": 0,
+    }
+
+    data = generate_sign(data)
+    # print(f"[POST]\n{data}")
+
+    url_captcha = "https://wjdr-giftcode-api.campfiregames.cn/api/captcha"
+    response = requests.post(
+        url_captcha,
+        headers=headers,
+        data=data
+    )
+    # print(response.headers)
+    response_data = response.json() if response.status_code == 200 else {"msg": ""}
+
+    captcha_img_base64 = response_data['data']['img']
+    # print(captcha_img)
+    captcha_img_base64 = captcha_img_base64[len("data:image/jpeg;base64"):]
+    captcha_img_bytes = base64.b64decode(captcha_img_base64)
+    # print(len(captcha_img_bytes))
+    captcha_img = Image.open(BytesIO(captcha_img_bytes))
+    result = ocr.classification(captcha_img)
+    captcha_img.save(os.path.join(ca_path, result + ".jpeg"))
+    return result
 
 
 class GiftRedeemApp(QWidget):
@@ -263,6 +307,9 @@ class RedeemThread(QThread):
                     elif msg == "RECEIVED.":
                         self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 重复兑换")
                         break
+                    elif msg == "CAPTCHA CHECK ERROR.":
+                        self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 验证码校验失败， 第 {attempt} 次失败，重试中...")
+                        time.sleep(2)
                     elif attempt < retry_time:
                         self.update_signal.emit(f"[兑换重试] 玩家 {nick_name} 礼包 {cdk} 第 {attempt} 次失败，重试中...")
                         time.sleep(2)
