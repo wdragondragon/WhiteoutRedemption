@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['WhiteoutRedemption.py'],
+    ['WhiteoutRedemption_ui.py'],
     pathex=[],
     binaries=[],
     datas=[('images/icon.png','images/')],
