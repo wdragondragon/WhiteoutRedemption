@@ -273,7 +273,7 @@ class RedeemThread(QThread):
         self.cdks = cdks
 
     def run(self):
-        retry_time = 5
+        retry_time = 10
         for i, fid_entry in enumerate(self.fids):
             fid = fid_entry.split(" (")[1][:-1]
             # 登录重试逻辑
@@ -299,24 +299,29 @@ class RedeemThread(QThread):
             for cdk in self.cdks:
                 # 兑换重试逻辑
                 for attempt in range(1, retry_time + 1):
-                    redeem_response = redeem_code(headers, fid, cdk)
-                    msg = redeem_response.get("msg", "")
-                    if msg == "SUCCESS":
-                        self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 成功")
-                        break
-                    elif msg == "RECEIVED.":
-                        self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 重复兑换")
-                        break
-                    elif msg == "CAPTCHA CHECK ERROR.":
-                        self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 验证码校验失败， 第 {attempt} 次失败，重试中...")
-                        time.sleep(2)
-                    elif attempt < retry_time:
-                        self.update_signal.emit(f"[兑换重试] 玩家 {nick_name} 礼包 {cdk} 第 {attempt} 次失败，重试中...")
-                        time.sleep(2)
-                    else:
-                        self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 兑换失败: {redeem_response}")
+                    try:
+                        redeem_response = redeem_code(headers, fid, cdk)
+                        msg = redeem_response.get("msg", "")
+                        if msg == "SUCCESS":
+                            self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 成功")
+                            break
+                        elif msg == "RECEIVED.":
+                            self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 重复兑换")
+                            break
+                        elif msg == "CAPTCHA CHECK ERROR.":
+                            self.update_signal.emit(
+                                f"[兑换] 玩家 {nick_name} 礼包 {cdk} 验证码校验失败， 第 {attempt} 次失败，重试中...")
+                            time.sleep(5)
+                        elif attempt < retry_time:
+                            self.update_signal.emit(
+                                f"[兑换重试] 玩家 {nick_name} 礼包 {cdk} 第 {attempt} 次失败，重试中...")
+                            time.sleep(5)
+                        else:
+                            self.update_signal.emit(f"[兑换] 玩家 {nick_name} 礼包 {cdk} 兑换失败: {redeem_response}")
+                    except Exception as e:
+                        pass
                 self.update_signal.emit("")
-                time.sleep(2)
+                time.sleep(4)
 
         self.finished_signal.emit()  # 兑换完成，通知主线程
 
