@@ -30,7 +30,9 @@ data_file = os.path.join(data_folder, "data.json")
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/133.0.0.0 Safari/537.36",
-    "Content-Type": "application/x-www-form-urlencoded"
+    "Content-Type": "application/x-www-form-urlencoded",
+    "referer": "https://wjdr-giftcode.centurygames.cn/",
+    "origin": "https://wjdr-giftcode.centurygames.cn"
 }
 
 
@@ -52,6 +54,7 @@ def generate_sign(data):
         f"{key}={json.dumps(data[key]) if isinstance(data[key], (dict, list)) else data[key]}" for key in sorted_keys)
     fixed_string = "Uiv#87#SPan.ECsp"
     sign_string = query_string + fixed_string
+    # sign_string = "fid=245990561&time=1766905589433"+fixed_string
     md5_hash = hashlib.md5(sign_string.encode('utf-8')).hexdigest()
     return {'sign': md5_hash, **data}
 
